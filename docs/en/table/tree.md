@@ -25,6 +25,7 @@
 | EXPAND_LAZY         | Enable lazy loading | boolean                                                         | false   |
 | EXPAND_LAZY_METHOD  | Custom lazy load method | ^[Function]`({row, column, rowIndex, colIndex,value})=>boolean` | —       |
 | TREE_INDENT         | Tree indent width   | number                                                          | 16      |
+| TREE_LINE           | Tree connection lines | boolean                                                         | false   |
 
 ## Collapse
 
@@ -76,5 +77,15 @@ h:400px
 ::: demo
 
 tree/indent
+h:400px
+:::
+
+## Tree Connection Lines
+
+-   Set `config.TREE_LINE` to enable tree connection lines, default is false
+
+::: demo
+
+tree/tree-line
 h:400px
 :::

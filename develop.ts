@@ -459,6 +459,7 @@ const eVirtTable = new EVirtTable(canvas, {
         },
     ],
     config: {
+        TREE_LINE: true,
         ICONS: [],
         BORDER: true,
         STRIPE: false,
@@ -892,6 +893,7 @@ if (modeRadioContainer) {
             // 更新配置
             if (newMode === 'normal') {
                 eVirtTable.loadConfig({
+                    TREE_LINE: true,
                     TREE_SELECT_MODE: 'auto',
                     AUTO_FIT_TREE_WIDTH: true,
                     ENABLE_CONTEXT_MENU: true,
@@ -911,6 +913,7 @@ if (modeRadioContainer) {
                 });
             } else {
                 eVirtTable.loadConfig({
+                    TREE_LINE: true,    
                     TREE_SELECT_MODE: 'auto',
                     AUTO_FIT_TREE_WIDTH: false,
                     ENABLE_CONTEXT_MENU: true,
@@ -1130,6 +1133,7 @@ document.getElementById('setValidator')?.addEventListener('click', () => {
 });
 document.getElementById('setConfig')?.addEventListener('click', () => {
     eVirtTable.loadConfig({
+        TREE_LINE: true,
         CELL_HEIGHT: 40,
         ENABLE_AUTOFILL: true,
         ENABLE_SELECTOR: true,

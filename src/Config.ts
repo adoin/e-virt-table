@@ -168,6 +168,8 @@ export default class Config {
     AUTO_FIT_TREE_WIDTH = false;
     /** 树形缩进宽度 */
     TREE_INDENT = 16;
+    /** 树形连接线 */
+    TREE_LINE = false;
     /** 启用单点击立马编辑 */
     ENABLE_EDIT_SINGLE_CLICK = false;
     /** 启用点击选择器编辑 */

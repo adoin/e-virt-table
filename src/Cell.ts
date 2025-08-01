@@ -163,6 +163,7 @@ export default class Cell extends BaseCell {
             this.updateSelection();
             this.updateTree();
         }
+        
         this.updateEditor();
         this.updateRender();
         this.getValidationMessage();
@@ -307,6 +308,143 @@ export default class Cell extends BaseCell {
     updateStyle() {
         this.style = this.getOverlayerViewsStyle();
     }
+    // 树形连接线信息
+    private treeLineInfo = {
+        hasParent: false,
+        isLastChild: false,
+        hasChildren: false,
+        isExpanded: false,
+        level: 0
+    };
+
+    private calculateTreeLines(row: any, level: number) {
+        // 判断是否有父级
+        const hasParent = level > 0;
+        
+        // 判断是否有子级（考虑懒加载情况）
+        const hasChildren = row.hasChildren && row.children && row.children.length > 0;
+        
+        // 判断是否展开
+        const isExpanded = row.expand;
+        
+        // 判断是否为最后一个子节点
+        let isLastChild = false;
+        if (hasParent) {
+            const parentKey = this.ctx.database.getTreeParent(row.id);
+            if (parentKey) {
+                const parentRow = this.ctx.database.getRowForRowKey(parentKey);
+                if (parentRow && parentRow.children) {
+                    const siblings = parentRow.children;
+                    const currentIndex = siblings.findIndex((sibling: any) => sibling.id === row.id);
+                    isLastChild = currentIndex === siblings.length - 1;
+                }
+            }
+        }
+        
+        this.treeLineInfo = {
+            hasParent,
+            isLastChild,
+            hasChildren,
+            isExpanded,
+            level
+        };
+    }
+
+    private drawTreeLines() {
+        if (!this.treeLineInfo.hasParent && !this.treeLineInfo.hasChildren) {
+            return;
+        }
+
+        const cellCenterY = this.drawY + this.visibleHeight / 2;
+
+        // 获取当前树形图标的中心位置
+        const getCurrentTreeIconCenter = () => {
+            if (this.type === 'tree') {
+                // 对于普通 tree 类型，使用 drawImageX
+                return this.drawImageX + this.drawImageWidth / 2;
+            } else {
+                // 对于 selection-tree 和 tree-selection 类型，使用 drawTreeImageX
+                return this.drawTreeImageX + this.drawTreeImageWidth / 2;
+            }
+        };
+
+        // 获取父级树形图标的中心位置
+        const getParentTreeIconCenter = () => {
+            const parentLevel = this.treeLineInfo.level - 1;
+            const { TREE_INDENT = 16, CELL_PADDING = 0 } = this.ctx.config;
+            
+            if (this.type === 'tree') {
+                // 对于普通 tree 类型，根据层级计算（与 updateTree 方法保持一致）
+                if (this.align === 'center' || this.align === 'right') {
+                    return this.drawX + (this.visibleWidth - 20) / 2 + (parentLevel * TREE_INDENT) + 10;
+                } else {
+                    return this.drawX + (parentLevel * TREE_INDENT) + CELL_PADDING + 10;
+                }
+            } else {
+                // 对于 selection-tree 和 tree-selection 类型
+                const { CHECKBOX_SIZE = 0 } = this.ctx.config;
+                if (this.type === 'selection-tree') {
+                    // selection-tree: checkbox 在中间，树形图标在右侧
+                    const checkboxCenterX = this.drawX + (this.visibleWidth - CHECKBOX_SIZE) / 2;
+                    return checkboxCenterX + CHECKBOX_SIZE + 4 + (parentLevel * TREE_INDENT) + 10;
+                } else {
+                    // tree-selection: 树形图标在左侧
+                    return this.drawX + (parentLevel * TREE_INDENT) + CELL_PADDING + 10;
+                }
+            }
+        };
+
+        // 绘制左侧连接线（父子关系）
+        if (this.treeLineInfo.hasParent) {
+            const parentIconCenterX = getParentTreeIconCenter();
+            
+            if (this.treeLineInfo.isLastChild) {
+                // L型线：从父级图标位置到当前行中心
+                this.ctx.paint.drawLine([parentIconCenterX, this.drawY, parentIconCenterX, cellCenterY], {
+                    borderColor: '#999',
+                    borderWidth: 1,
+                    lineDash: [2, 2]
+                });
+            } else {
+                // ├型线：从父级图标位置到单元格底部（为下一个兄弟节点做准备）
+                this.ctx.paint.drawLine([parentIconCenterX, this.drawY, parentIconCenterX, this.drawY + this.visibleHeight], {
+                    borderColor: '#999',
+                    borderWidth: 1,
+                    lineDash: [2, 2]
+                });
+            }
+        }
+
+        // 绘制向下连接线（展开状态）
+        if (this.treeLineInfo.hasChildren && this.treeLineInfo.isExpanded) {
+            const currentIconCenterX = getCurrentTreeIconCenter();
+            
+            // 从展开图标中心向下延伸到第一个子节点的水平线位置
+            const firstChildY = this.drawY + this.visibleHeight;
+            this.ctx.paint.drawLine([currentIconCenterX, cellCenterY, currentIconCenterX, firstChildY], {
+                borderColor: '#999',
+                borderWidth: 1,
+                lineDash: [2, 2]
+            });
+        }
+
+        // 绘制子项的横线连接（如果有父级且不是根节点）
+        if (this.treeLineInfo.hasParent) {
+            // 横线起点：父级竖线位置
+            const parentIconCenterX = getParentTreeIconCenter();
+            
+            // 横线终点：当前子项的树形图标中心
+            const currentIconCenterX = getCurrentTreeIconCenter();
+            
+            // 绘制横线：从父级竖线位置到当前子项图标
+            this.ctx.paint.drawLine([parentIconCenterX, cellCenterY, currentIconCenterX, cellCenterY], {
+                borderColor: '#999',
+                borderWidth: 1,
+                lineDash: [2, 2]
+            });
+        }
+    }
+
     private updateTree() {
         const { CELL_PADDING = 0 } = this.ctx.config;
         const { rowKey, cellType } = this;
@@ -322,8 +460,13 @@ export default class Cell extends BaseCell {
             this.rowHasChildren = hasChildren;
 
             // 计算树形图标的偏移量
-            const { TREE_INDENT = 16 } = this.ctx.config;
+            const { TREE_INDENT = 16, TREE_LINE = false } = this.ctx.config;
             iconOffsetX = level * TREE_INDENT;
+
+            // 计算连接线信息
+            if (TREE_LINE) {
+                this.calculateTreeLines(row, level);
+            }
 
             if (expandLoading) {
                 const loadingIcon = this.ctx.icons.get('loading');
@@ -894,6 +1037,12 @@ export default class Cell extends BaseCell {
         this.drawSelector();
         this.drawAutofillPiont();
         this.drawErrorTip();
+        
+        // 绘制树形连接线（在树形图标绘制之后）
+        const { TREE_LINE = false } = this.ctx.config;
+        if (TREE_LINE && (this.type === 'tree' || this.type === 'selection-tree' || this.type === 'tree-selection')) {
+            this.drawTreeLines();
+        }
     }
     /**
      * 根据列的索引获取列的宽度

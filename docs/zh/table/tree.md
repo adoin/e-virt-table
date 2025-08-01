@@ -27,6 +27,7 @@
 | EXPAND_LAZY        | 是否开启懒加载 | boolean                                                         | false  |
 | EXPAND_LAZY_METHOD | 自定义选择禁用 | ^[Function]`({row, column, rowIndex, colIndex,value})=>boolean` | —      |
 | TREE_INDENT        | 树形缩进宽度   | number                                                          | 16     |
+| TREE_LINE          | 树形连接线     | boolean                                                         | false  |
 
 ## 收起
 
@@ -79,5 +80,15 @@ h:400px
 ::: demo
 
 tree/indent
+h:400px
+:::
+
+## 树形连接线
+
+-   `config.TREE_LINE` 设置是否显示树形连接线，默认为 false
+
+::: demo
+
+tree/tree-line
 h:400px
 :::
